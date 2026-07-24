@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>השעון של כליל 🕐</title>
+<style>
+  :root{
+    --pink:#ff8fb1;
+    --pink-dark:#ff5c8a;
+    --purple:#b57bff;
+    --blue:#6ec7ff;
+    --yellow:#ffd85e;
+    --green:#7ee081;
+    --cream:#fff7ef;
+    --ink:#5a3e6b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:"Varela Round","Trebuchet MS",Arial,sans-serif;
+    background:linear-gradient(160deg,#ffe3f1 0%,#e7d6ff 45%,#d6f0ff 100%);
+    color:var(--ink);
+    min-height:100%;
+    overflow-x:hidden;
+    -webkit-user-select:none;user-select:none;
+    text-align:center;
+  }
+  .app{max-width:520px;margin:0 auto;padding:16px 14px 40px;position:relative;}
+
+  /* floating background bubbles */
+  .bg{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none;}
+  .bg span{position:absolute;bottom:-60px;font-size:34px;opacity:.55;animation:rise linear infinite;}
+  @keyframes rise{to{transform:translateY(-115vh) rotate(360deg);}}
+
+  .screen{position:relative;z-index:1;display:none;animation:pop .4s ease;}
+  .screen.active{display:block;}
+  @keyframes pop{from{transform:scale(.85);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+  h1{font-size:34px;margin:10px 0 4px;color:var(--pink-dark);text-shadow:0 3px 0 #fff;}
+  .sub{font-size:19px;margin:0 0 14px;color:var(--purple);}
+
+  /* buttons */
+  button{
+    font-family:inherit;cursor:pointer;border:none;outline:none;
+    border-radius:26px;font-weight:bold;transition:transform .12s;
+  }
+  button:active{transform:scale(.93);}
+  .big-btn{
+    font-size:26px;color:#fff;padding:18px 26px;margin:8px 6px;
+    box-shadow:0 6px 0 rgba(0,0,0,.15);
+  }
+  .b-pink{background:var(--pink-dark);}
+  .b-purple{background:var(--purple);}
+  .b-blue{background:var(--blue);}
+  .b-green{background:var(--green);}
+  .b-yellow{background:var(--yellow);color:var(--ink);}
+
+  .menu-card{
+    background:rgba(255,255,255,.75);border-radius:32px;padding:20px 16px;
+    box-shadow:0 10px 30px rgba(180,120,200,.28);margin-top:8px;
+  }
+  .menu-row{display:flex;flex-direction:column;gap:6px;}
+
+  .star-count{
+    display:inline-flex;align-items:center;gap:6px;background:#fff;
+    border-radius:22px;padding:6px 16px;font-size:22px;font-weight:bold;
+    color:var(--pink-dark);box-shadow:0 4px 10px rgba(0,0,0,.1);margin-top:6px;
+  }
+
+  /* clock */
+  .clock-wrap{display:flex;justify-content:center;margin:6px 0;}
+  svg.clock{width:min(78vw,320px);height:min(78vw,320px);filter:drop-shadow(0 8px 14px rgba(150,90,180,.3));}
+  .tick-num{font-size:26px;font-weight:bold;fill:var(--ink);font-family:inherit;}
+  .min-num{font-size:12px;font-weight:bold;fill:var(--purple);font-family:inherit;}
+  .hand{transition:transform .5s cubic-bezier(.34,1.56,.64,1);transform-origin:100px 100px;}
+  .hand.drag{transition:none;cursor:grab;}
+
+  .prompt{font-size:26px;font-weight:bold;margin:6px 0;color:var(--pink-dark);}
+  .digital{
+    font-size:30px;font-weight:bold;color:var(--purple);background:#fff;
+    display:inline-block;padding:6px 22px;border-radius:20px;margin:4px 0;
+    box-shadow:0 4px 10px rgba(0,0,0,.08);let-spacing:2px;
+  }
+
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 4px;}
+  .choice{
+    font-size:24px;padding:18px 6px;color:#fff;background:var(--purple);
+    box-shadow:0 5px 0 rgba(0,0,0,.13);
+  }
+  .choice.right{background:var(--green)!important;animation:jiggle .5s;}
+  .choice.wrong{background:#ff8f8f!important;animation:shake .4s;}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+  @keyframes jiggle{0%,100%{transform:scale(1);}40%{transform:scale(1.12);}}
+
+  .toolbar{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:8px;}
+  .mini-btn{font-size:18px;padding:10px 16px;background:#fff;color:var(--purple);box-shadow:0 4px 0 rgba(0,0,0,.1);}
+  .back-btn{position:absolute;top:6px;right:0;font-size:16px;padding:10px 14px;background:#fff;color:var(--pink-dark);box-shadow:0 3px 0 rgba(0,0,0,.1);z-index:3;}
+
+  .feedback{font-size:30px;min-height:40px;margin:8px 0;font-weight:bold;}
+  .mascot{font-size:70px;display:inline-block;transition:transform .3s;}
+  .mascot.happy{animation:bounce .6s;}
+  @keyframes bounce{0%,100%{transform:translateY(0);}30%{transform:translateY(-22px) rotate(-8deg);}60%{transform:translateY(-10px) rotate(8deg);}}
+
+  /* set-clock game hint arrows */
+  .setter-btns{display:flex;justify-content:center;gap:14px;margin:8px 0;}
+  .setter-btns button{font-size:30px;width:64px;height:64px;border-radius:50%;background:var(--blue);color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.13);}
+  .setter-label{font-size:16px;color:var(--ink);}
+
+  /* confetti */
+  .confetti{position:fixed;top:-20px;font-size:24px;z-index:50;pointer-events:none;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(105vh) rotate(540deg);opacity:.9;}}
+
+  /* progress dots */
+  .progress{display:flex;justify-content:center;gap:8px;margin:6px 0;}
+  .dot{width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2px var(--purple);}
+  .dot.on{background:var(--yellow);box-shadow:inset 0 0 0 2px var(--yellow);}
+  .win-emoji{font-size:90px;animation:bounce 1s infinite;}
+</style>
+</head>
+<body>
+<div class="bg" id="bg"></div>
+
+<div class="app">
+
+  <!-- ======= HOME ======= -->
+  <section class="screen active" id="home">
+    <div class="mascot" style="font-size:80px">🐰</div>
+    <h1>השעון של כְּלִיל</h1>
+    <p class="sub">בואי נלמד לקרוא את השעון! ⏰</p>
+    <div class="menu-card">
+      <div class="menu-row">
+        <button class="big-btn b-blue" onclick="go('learn')">📖 בואי נלמד</button>
+        <button class="big-btn b-pink" onclick="startGame('read')">🎮 מה השעה?</button>
+        <button class="big-btn b-purple" onclick="startGame('set')">🖐️ סובבי את השעון</button>
+      </div>
+    </div>
+    <div class="star-count">⭐ <span id="homeStars">0</span> כוכבים</div>
+  </section>
+
+  <!-- ======= LEARN ======= -->
+  <section class="screen" id="learn">
+    <button class="back-btn" onclick="go('home')">🏠 בית</button>
+    <h1>בואי נלמד</h1>
+    <div class="clock-wrap"><div id="learnClock"></div></div>
+    <div class="digital" id="learnDigital">3:00</div>
+    <p class="prompt" id="learnWords">שלוש</p>
+    <div class="setter-btns">
+      <div>
+        <button onclick="learnStep(-1)">➖</button>
+        <div class="setter-label">שעה</div>
+      </div>
+      <div>
+        <button onclick="toggleHalf()">½</button>
+        <div class="setter-label">חצי</div>
+      </div>
+      <div>
+        <button onclick="learnStep(1)">➕</button>
+        <div class="setter-label">שעה</div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="mini-btn" onclick="sayLearn()">🔊 שמעי שוב</button>
+    </div>
+  </section>
+
+  <!-- ======= READ GAME (what time is it?) ======= -->
+  <section class="screen" id="read">
+    <button class="back-btn" onclick="go('home')">🏠 בית</button>
+    <div class="progress" id="readProgress"></div>
+    <p class="prompt">מה השעה? 🤔</p>
+    <div class="clock-wrap"><div id="readClock"></div></div>
+    <div class="choices" id="readChoices"></div>
+    <div class="feedback" id="readFeedback"></div>
+  </section>
+
+  <!-- ======= SET GAME (move the hands) ======= -->
+  <section class="screen" id="set">
+    <button class="back-btn" onclick="go('home')">🏠 בית</button>
+    <div class="progress" id="setProgress"></div>
+    <p class="prompt">סובבי לשעה: <span id="setTarget"></span></p>
+    <div class="clock-wrap"><div id="setClock"></div></div>
+    <div class="setter-btns">
+      <div>
+        <button onclick="setStep(-1)">➖</button>
+        <div class="setter-label">אחורה</div>
+      </div>
+      <div>
+        <button class="b-green" style="background:var(--green)" onclick="checkSet()">✔️</button>
+        <div class="setter-label">בדקי</div>
+      </div>
+      <div>
+        <button onclick="setStep(1)">➕</button>
+        <div class="setter-label">קדימה</div>
+      </div>
+    </div>
+    <div class="feedback" id="setFeedback"></div>
+  </section>
+
+  <!-- ======= WIN ======= -->
+  <section class="screen" id="win">
+    <div class="win-emoji">🏆</div>
+    <h1>כל הכבוד כליל!</h1>
+    <p class="sub" id="winText">אספת 5 כוכבים! ⭐</p>
+    <div class="menu-card">
+      <div class="menu-row">
+        <button class="big-btn b-green" id="winAgain">🔁 עוד פעם</button>
+        <button class="big-btn b-purple" onclick="go('home')">🏠 בית</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============ helpers ============ */
+const $ = id => document.getElementById(id);
+let stars = +(localStorage.getItem('klil_stars')||0);
+function updateStars(){ $('homeStars').textContent = stars; localStorage.setItem('klil_stars', stars); }
+
+const HOUR_WORDS = ['שתים עשרה','אחת','שתיים','שלוש','ארבע','חמש','שש','שבע','שמונה','תשע','עשר','אחת עשרה'];
+function hourWord(h){ return HOUR_WORDS[h % 12]; }
+function timeWords(h, half){
+  return half ? hourWord(h) + ' וחצי' : hourWord(h) + ' בדיוק';
+}
+function digital(h, half){
+  let hh = h % 12; if(hh===0) hh=12;
+  return hh + ':' + (half ? '30' : '00');
+}
+
+/* ============ speech (Hebrew) ============ */
+function speak(text){
+  try{
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'he-IL'; u.rate = .9; u.pitch = 1.15;
+    const v = speechSynthesis.getVoices().find(v=>/he|iw/i.test(v.lang));
+    if(v) u.voice = v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+if('speechSynthesis' in window){ speechSynthesis.onvoiceschanged = ()=>{}; }
+
+/* ============ happy sound (Web Audio) ============ */
+let actx;
+function tone(freq, start, dur, type='sine'){
+  if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.value = freq;
+  o.connect(g); g.connect(actx.destination);
+  const t = actx.currentTime + start;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(.25, t+.02);
+  g.gain.exponentialRampToValueAtTime(.001, t+dur);
+  o.start(t); o.stop(t+dur);
+}
+function cheer(){ [523,659,784,1047].forEach((f,i)=>tone(f, i*.1, .3)); }
+function buzz(){ tone(200,0,.2,'square'); tone(150,.12,.25,'square'); }
+
+/* ============ build an SVG clock ============ */
+function clockSVG(h, half, opts={}){
+  const cx=100, cy=100;
+  let mins='';
+  for(let i=0;i<60;i++){
+    const a = i*6 * Math.PI/180;
+    const long = i%5===0;
+    const r1 = long?86:89, r2=92;
+    const x1=cx+r1*Math.sin(a), y1=cy-r1*Math.cos(a);
+    const x2=cx+r2*Math.sin(a), y2=cy-r2*Math.cos(a);
+    mins += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${long?'#b57bff':'#d9c2ff'}" stroke-width="${long?2.5:1.5}" stroke-linecap="round"/>`;
+  }
+  let nums='';
+  for(let n=1;n<=12;n++){
+    const a = n*30 * Math.PI/180;
+    const x=cx+70*Math.sin(a), y=cy-70*Math.cos(a)+9;
+    nums += `<text x="${x}" y="${y}" text-anchor="middle" class="tick-num">${n}</text>`;
+    // minute labels (5,10,...) shown small in learn/opts
+    if(opts.minNums){
+      const mv = (n*5)%60;
+      const xm=cx+56*Math.sin(a), ym=cy-56*Math.cos(a)+5;
+      nums += `<text x="${xm}" y="${ym}" text-anchor="middle" class="min-num">${mv}</text>`;
+    }
+  }
+  const minAngle = half?180:0;
+  const hourAngle = (h%12)*30 + (half?15:0);
+  const id = opts.id||'';
+  return `<svg class="clock" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="97" fill="#fff" stroke="#ff8fb1" stroke-width="5"/>
+    <circle cx="100" cy="100" r="97" fill="none" stroke="#ffd85e" stroke-width="2" stroke-dasharray="3 5"/>
+    ${mins}${nums}
+    <!-- hour hand -->
+    <g class="hand" id="${id}hourHand" style="transform:rotate(${hourAngle}deg)">
+      <line x1="100" y1="108" x2="100" y2="52" stroke="#ff5c8a" stroke-width="8" stroke-linecap="round"/>
+    </g>
+    <!-- minute hand -->
+    <g class="hand" id="${id}minHand" style="transform:rotate(${minAngle}deg)">
+      <line x1="100" y1="112" x2="100" y2="30" stroke="#b57bff" stroke-width="6" stroke-linecap="round"/>
+    </g>
+    <circle cx="100" cy="100" r="8" fill="#5a3e6b"/>
+    <circle cx="100" cy="100" r="4" fill="#fff"/>
+    <text x="100" y="150" text-anchor="middle" font-size="20">🙂</text>
+  </svg>`;
+}
+
+/* ============ navigation ============ */
+function go(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(screen).classList.add('active');
+  updateStars();
+}
+
+/* ============ LEARN mode ============ */
+let learnH = 3, learnHalf = false;
+function renderLearn(){
+  $('learnClock').innerHTML = clockSVG(learnH, learnHalf, {minNums:true, id:'ln'});
+  $('learnDigital').textContent = digital(learnH, learnHalf);
+  $('learnWords').textContent = timeWords(learnH, learnHalf);
+}
+function sayLearn(){ speak('השעה ' + timeWords(learnH, learnHalf)); }
+function learnStep(d){
+  learnH = (learnH + d + 12) % 12;
+  renderLearn(); sayLearn();
+}
+function toggleHalf(){ learnHalf = !learnHalf; renderLearn(); sayLearn(); }
+
+/* ============ READ game ============ */
+let readRound=0, readNeed=5, readAns, readHalfMode=false;
+function startGame(type){
+  if(type==='read'){ readRound=0; go('read'); nextRead(); }
+  else { setRound=0; go('set'); nextSet(); }
+}
+function pips(id, total, done){
+  let s=''; for(let i=0;i<total;i++) s+=`<div class="dot ${i<done?'on':''}"></div>`;
+  $(id).innerHTML=s;
+}
+function randHour(){ return Math.floor(Math.random()*12); }
+function nextRead(){
+  pips('readProgress', readNeed, readRound);
+  $('readFeedback').innerHTML='';
+  const h = randHour();
+  // half hours appear after round 2 to build difficulty
+  const half = readRound>=2 ? Math.random()<.4 : false;
+  readAns = digital(h, half);
+  $('readClock').innerHTML = clockSVG(h, half, {id:'rd'});
+  // build 4 options
+  const opts = new Set([readAns]);
+  while(opts.size<4){
+    const hh=randHour(), ha=Math.random()<.4;
+    opts.add(digital(hh,ha));
+  }
+  const arr=[...opts].sort(()=>Math.random()-.5);
+  $('readChoices').innerHTML = arr.map(o=>
+    `<button class="choice" onclick="answerRead(this,'${o}')">${o}</button>`).join('');
+  speak('מה השעה?');
+}
+function answerRead(btn, val){
+  if(val===readAns){
+    btn.classList.add('right'); cheer();
+    speak('כל הכבוד! השעה ' + timeWords(+readAns.split(':')[0], readAns.endsWith('30')));
+    $('readFeedback').innerHTML='🎉 נכון מאוד!';
+    stars++; updateStars(); burstConfetti();
+    readRound++;
+    document.querySelectorAll('#readChoices .choice').forEach(b=>b.onclick=null);
+    setTimeout(()=>{ if(readRound>=readNeed) winScreen('read'); else nextRead(); }, 1400);
+  }else{
+    btn.classList.add('wrong'); buzz();
+    speak('אופס, נסי שוב');
+    $('readFeedback').innerHTML='נסי שוב 💪';
+    setTimeout(()=>btn.classList.remove('wrong'),400);
+  }
+}
+
+/* ============ SET game (rotate hands) ============ */
+let setRound=0, setNeed=5, setTargetH, setTargetHalf, setCurH, setCurHalf;
+function nextSet(){
+  pips('setProgress', setNeed, setRound);
+  $('setFeedback').innerHTML='';
+  setTargetH = randHour();
+  setTargetHalf = setRound>=2 ? Math.random()<.4 : false;
+  $('setTarget').textContent = digital(setTargetH, setTargetHalf) + ' (' + timeWords(setTargetH,setTargetHalf) + ')';
+  // start from a random different position
+  do{ setCurH=randHour(); setCurHalf=Math.random()<.5; }
+  while(setCurH===setTargetH && setCurHalf===setTargetHalf);
+  renderSet();
+  speak('סובבי את השעון לשעה ' + timeWords(setTargetH, setTargetHalf));
+}
+function renderSet(){ $('setClock').innerHTML = clockSVG(setCurH, setCurHalf, {id:'st'}); }
+function setStep(d){
+  // step goes half-hour by half-hour
+  if(d>0){ if(!setCurHalf){setCurHalf=true;} else {setCurHalf=false; setCurH=(setCurH+1)%12;} }
+  else { if(setCurHalf){setCurHalf=false;} else {setCurHalf=true; setCurH=(setCurH+11)%12;} }
+  renderSet();
+}
+function checkSet(){
+  if(setCurH===setTargetH && setCurHalf===setTargetHalf){
+    cheer(); speak('מדהים! הצלחת!');
+    $('setFeedback').innerHTML='🌟 מושלם!';
+    stars++; updateStars(); burstConfetti();
+    setRound++;
+    setTimeout(()=>{ if(setRound>=setNeed) winScreen('set'); else nextSet(); }, 1400);
+  }else{
+    buzz(); speak('כמעט! נסי שוב');
+    $('setFeedback').innerHTML='כמעט! 🙈';
+  }
+}
+
+/* ============ WIN ============ */
+function winScreen(type){
+  go('win');
+  $('winText').textContent = 'אספת ' + (type==='read'?readNeed:setNeed) + ' כוכבים! ⭐ סה"כ ' + stars;
+  cheer(); burstConfetti(40); speak('כל הכבוד כליל! ניצחת!');
+  $('winAgain').onclick = ()=>startGame(type);
+}
+
+/* ============ confetti ============ */
+function burstConfetti(n=18){
+  const em=['⭐','💖','🌈','🎈','🦄','🌸','✨','🍭'];
+  for(let i=0;i<n;i++){
+    const c=document.createElement('div');
+    c.className='confetti'; c.textContent=em[Math.floor(Math.random()*em.length)];
+    c.style.left=Math.random()*100+'vw';
+    c.style.animationDuration=(1.5+Math.random()*1.5)+'s';
+    c.style.fontSize=(18+Math.random()*22)+'px';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),3000);
+  }
+}
+
+/* ============ background bubbles ============ */
+(function(){
+  const em=['☁️','⭐','🌸','💖','🎈','🦋'];
+  let s='';
+  for(let i=0;i<9;i++){
+    s+=`<span style="left:${Math.random()*100}%;animation-duration:${9+Math.random()*8}s;animation-delay:${-Math.random()*10}s;">${em[i%em.length]}</span>`;
+  }
+  $('bg').innerHTML=s;
+})();
+
+/* ============ init ============ */
+renderLearn();
+updateStars();
+// warm up speech voices
+window.addEventListener('load',()=>{ if('speechSynthesis'in window) speechSynthesis.getVoices(); });
+document.body.addEventListener('touchstart',()=>{ if(!actx){try{actx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}} },{once:true});
+</script>
+</body>
+</html>
