@@ -74,13 +74,12 @@
   .tick-num{font-size:26px;font-weight:bold;fill:var(--ink);font-family:inherit;}
   .min-num{font-size:12px;font-weight:bold;fill:var(--purple);font-family:inherit;}
   .hand{transition:transform .5s cubic-bezier(.34,1.56,.64,1);transform-origin:100px 100px;}
-  .hand.drag{transition:none;cursor:grab;}
 
   .prompt{font-size:26px;font-weight:bold;margin:6px 0;color:var(--pink-dark);}
   .digital{
     font-size:30px;font-weight:bold;color:var(--purple);background:#fff;
     display:inline-block;padding:6px 22px;border-radius:20px;margin:4px 0;
-    box-shadow:0 4px 10px rgba(0,0,0,.08);let-spacing:2px;
+    box-shadow:0 4px 10px rgba(0,0,0,.08);
   }
 
   .choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 4px;}
@@ -99,13 +98,11 @@
 
   .feedback{font-size:30px;min-height:40px;margin:8px 0;font-weight:bold;}
   .mascot{font-size:70px;display:inline-block;transition:transform .3s;}
-  .mascot.happy{animation:bounce .6s;}
-  @keyframes bounce{0%,100%{transform:translateY(0);}30%{transform:translateY(-22px) rotate(-8deg);}60%{transform:translateY(-10px) rotate(8deg);}}
 
-  /* set-clock game hint arrows */
-  .setter-btns{display:flex;justify-content:center;gap:14px;margin:8px 0;}
-  .setter-btns button{font-size:30px;width:64px;height:64px;border-radius:50%;background:var(--blue);color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.13);}
-  .setter-label{font-size:16px;color:var(--ink);}
+  /* setter buttons */
+  .setter-btns{display:flex;justify-content:center;gap:14px;margin:8px 0;flex-wrap:wrap;}
+  .setter-btns button{font-size:26px;min-width:64px;height:64px;padding:0 14px;border-radius:32px;background:var(--blue);color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.13);}
+  .setter-label{font-size:15px;color:var(--ink);margin-top:2px;}
 
   /* confetti */
   .confetti{position:fixed;top:-20px;font-size:24px;z-index:50;pointer-events:none;animation:fall linear forwards;}
@@ -116,6 +113,7 @@
   .dot{width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2px var(--purple);}
   .dot.on{background:var(--yellow);box-shadow:inset 0 0 0 2px var(--yellow);}
   .win-emoji{font-size:90px;animation:bounce 1s infinite;}
+  @keyframes bounce{0%,100%{transform:translateY(0);}30%{transform:translateY(-22px) rotate(-8deg);}60%{transform:translateY(-10px) rotate(8deg);}}
 </style>
 </head>
 <body>
@@ -144,18 +142,18 @@
     <h1>בואי נלמד</h1>
     <div class="clock-wrap"><div id="learnClock"></div></div>
     <div class="digital" id="learnDigital">3:00</div>
-    <p class="prompt" id="learnWords">שלוש</p>
+    <p class="prompt" id="learnWords">שלוש בדיוק</p>
     <div class="setter-btns">
       <div>
-        <button onclick="learnStep(-1)">➖</button>
+        <button onclick="learnStep(-1)" aria-label="שעה אחורה">➖</button>
         <div class="setter-label">שעה</div>
       </div>
       <div>
-        <button onclick="toggleHalf()">½</button>
-        <div class="setter-label">חצי</div>
+        <button onclick="learnQuarter()" aria-label="רבע שעה">🕓 רבע</button>
+        <div class="setter-label">רבע שעה</div>
       </div>
       <div>
-        <button onclick="learnStep(1)">➕</button>
+        <button onclick="learnStep(1)" aria-label="שעה קדימה">➕</button>
         <div class="setter-label">שעה</div>
       </div>
     </div>
@@ -182,15 +180,15 @@
     <div class="clock-wrap"><div id="setClock"></div></div>
     <div class="setter-btns">
       <div>
-        <button onclick="setStep(-1)">➖</button>
+        <button onclick="setStep(-1)" aria-label="אחורה">➖</button>
         <div class="setter-label">אחורה</div>
       </div>
       <div>
-        <button class="b-green" style="background:var(--green)" onclick="checkSet()">✔️</button>
+        <button class="b-green" style="background:var(--green)" onclick="checkSet()" aria-label="בדקי">✔️</button>
         <div class="setter-label">בדקי</div>
       </div>
       <div>
-        <button onclick="setStep(1)">➕</button>
+        <button onclick="setStep(1)" aria-label="קדימה">➕</button>
         <div class="setter-label">קדימה</div>
       </div>
     </div>
@@ -215,17 +213,22 @@
 <script>
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
-let stars = +(localStorage.getItem('klil_stars')||0);
-function updateStars(){ $('homeStars').textContent = stars; localStorage.setItem('klil_stars', stars); }
+let stars = 0;
+try{ stars = +(localStorage.getItem('klil_stars')||0); }catch(e){}
+function updateStars(){ $('homeStars').textContent = stars; try{localStorage.setItem('klil_stars', stars);}catch(e){} }
 
+/* time model: hour h (0..11) + minutes m in {0,15,30,45} */
 const HOUR_WORDS = ['שתים עשרה','אחת','שתיים','שלוש','ארבע','חמש','שש','שבע','שמונה','תשע','עשר','אחת עשרה'];
-function hourWord(h){ return HOUR_WORDS[h % 12]; }
-function timeWords(h, half){
-  return half ? hourWord(h) + ' וחצי' : hourWord(h) + ' בדיוק';
+function hourWord(h){ return HOUR_WORDS[((h%12)+12)%12]; }
+function timeWords(h, m){
+  if(m===15) return hourWord(h) + ' ורבע';
+  if(m===30) return hourWord(h) + ' וחצי';
+  if(m===45) return 'רבע ל' + hourWord(h+1);
+  return hourWord(h) + ' בדיוק';
 }
-function digital(h, half){
+function digital(h, m){
   let hh = h % 12; if(hh===0) hh=12;
-  return hh + ':' + (half ? '30' : '00');
+  return hh + ':' + (m<10 ? '0'+m : ''+m);
 }
 
 /* ============ speech (Hebrew) ============ */
@@ -244,21 +247,23 @@ if('speechSynthesis' in window){ speechSynthesis.onvoiceschanged = ()=>{}; }
 /* ============ happy sound (Web Audio) ============ */
 let actx;
 function tone(freq, start, dur, type='sine'){
-  if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
-  const o = actx.createOscillator(), g = actx.createGain();
-  o.type = type; o.frequency.value = freq;
-  o.connect(g); g.connect(actx.destination);
-  const t = actx.currentTime + start;
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(.25, t+.02);
-  g.gain.exponentialRampToValueAtTime(.001, t+dur);
-  o.start(t); o.stop(t+dur);
+  try{
+    if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = freq;
+    o.connect(g); g.connect(actx.destination);
+    const t = actx.currentTime + start;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(.25, t+.02);
+    g.gain.exponentialRampToValueAtTime(.001, t+dur);
+    o.start(t); o.stop(t+dur);
+  }catch(e){}
 }
 function cheer(){ [523,659,784,1047].forEach((f,i)=>tone(f, i*.1, .3)); }
 function buzz(){ tone(200,0,.2,'square'); tone(150,.12,.25,'square'); }
 
 /* ============ build an SVG clock ============ */
-function clockSVG(h, half, opts={}){
+function clockSVG(h, m, opts={}){
   const cx=100, cy=100;
   let mins='';
   for(let i=0;i<60;i++){
@@ -274,17 +279,16 @@ function clockSVG(h, half, opts={}){
     const a = n*30 * Math.PI/180;
     const x=cx+70*Math.sin(a), y=cy-70*Math.cos(a)+9;
     nums += `<text x="${x}" y="${y}" text-anchor="middle" class="tick-num">${n}</text>`;
-    // minute labels (5,10,...) shown small in learn/opts
     if(opts.minNums){
       const mv = (n*5)%60;
       const xm=cx+56*Math.sin(a), ym=cy-56*Math.cos(a)+5;
       nums += `<text x="${xm}" y="${ym}" text-anchor="middle" class="min-num">${mv}</text>`;
     }
   }
-  const minAngle = half?180:0;
-  const hourAngle = (h%12)*30 + (half?15:0);
+  const minAngle = m*6;
+  const hourAngle = (h%12)*30 + m*0.5;
   const id = opts.id||'';
-  return `<svg class="clock" viewBox="0 0 200 200">
+  return `<svg class="clock" viewBox="0 0 200 200" role="img" aria-label="שעון">
     <circle cx="100" cy="100" r="97" fill="#fff" stroke="#ff8fb1" stroke-width="5"/>
     <circle cx="100" cy="100" r="97" fill="none" stroke="#ffd85e" stroke-width="2" stroke-dasharray="3 5"/>
     ${mins}${nums}
@@ -310,21 +314,29 @@ function go(screen){
 }
 
 /* ============ LEARN mode ============ */
-let learnH = 3, learnHalf = false;
+let learnH = 3, learnM = 0;
 function renderLearn(){
-  $('learnClock').innerHTML = clockSVG(learnH, learnHalf, {minNums:true, id:'ln'});
-  $('learnDigital').textContent = digital(learnH, learnHalf);
-  $('learnWords').textContent = timeWords(learnH, learnHalf);
+  $('learnClock').innerHTML = clockSVG(learnH, learnM, {minNums:true, id:'ln'});
+  $('learnDigital').textContent = digital(learnH, learnM);
+  $('learnWords').textContent = timeWords(learnH, learnM);
 }
-function sayLearn(){ speak('השעה ' + timeWords(learnH, learnHalf)); }
-function learnStep(d){
-  learnH = (learnH + d + 12) % 12;
-  renderLearn(); sayLearn();
+function sayLearn(){ speak('השעה ' + timeWords(learnH, learnM)); }
+function learnStep(d){ learnH = (learnH + d + 12) % 12; renderLearn(); sayLearn(); }
+function learnQuarter(){ learnM = (learnM + 15) % 60; renderLearn(); sayLearn(); }
+
+/* difficulty: which minutes are allowed at a given round */
+function minutePool(round){
+  if(round < 2) return [0];
+  if(round < 3) return [0,30];
+  return [0,15,30,45];
 }
-function toggleHalf(){ learnHalf = !learnHalf; renderLearn(); sayLearn(); }
+function pickMinute(round){
+  const p = minutePool(round);
+  return p[Math.floor(Math.random()*p.length)];
+}
 
 /* ============ READ game ============ */
-let readRound=0, readNeed=5, readAns, readHalfMode=false;
+let readRound=0, readNeed=5, readAns, readAnsH, readAnsM;
 function startGame(type){
   if(type==='read'){ readRound=0; go('read'); nextRead(); }
   else { setRound=0; go('set'); nextSet(); }
@@ -337,16 +349,16 @@ function randHour(){ return Math.floor(Math.random()*12); }
 function nextRead(){
   pips('readProgress', readNeed, readRound);
   $('readFeedback').innerHTML='';
-  const h = randHour();
-  // half hours appear after round 2 to build difficulty
-  const half = readRound>=2 ? Math.random()<.4 : false;
-  readAns = digital(h, half);
-  $('readClock').innerHTML = clockSVG(h, half, {id:'rd'});
-  // build 4 options
+  readAnsH = randHour();
+  readAnsM = pickMinute(readRound);
+  readAns = digital(readAnsH, readAnsM);
+  $('readClock').innerHTML = clockSVG(readAnsH, readAnsM, {id:'rd'});
+  // build 4 options (distractors drawn from all quarter values)
+  const allMin=[0,15,30,45];
   const opts = new Set([readAns]);
-  while(opts.size<4){
-    const hh=randHour(), ha=Math.random()<.4;
-    opts.add(digital(hh,ha));
+  let guard=0;
+  while(opts.size<4 && guard++<50){
+    opts.add(digital(randHour(), allMin[Math.floor(Math.random()*4)]));
   }
   const arr=[...opts].sort(()=>Math.random()-.5);
   $('readChoices').innerHTML = arr.map(o=>
@@ -356,7 +368,7 @@ function nextRead(){
 function answerRead(btn, val){
   if(val===readAns){
     btn.classList.add('right'); cheer();
-    speak('כל הכבוד! השעה ' + timeWords(+readAns.split(':')[0], readAns.endsWith('30')));
+    speak('כל הכבוד! השעה ' + timeWords(readAnsH, readAnsM));
     $('readFeedback').innerHTML='🎉 נכון מאוד!';
     stars++; updateStars(); burstConfetti();
     readRound++;
@@ -371,28 +383,31 @@ function answerRead(btn, val){
 }
 
 /* ============ SET game (rotate hands) ============ */
-let setRound=0, setNeed=5, setTargetH, setTargetHalf, setCurH, setCurHalf;
+let setRound=0, setNeed=5, setTargetH, setTargetM, setCurH, setCurM;
 function nextSet(){
   pips('setProgress', setNeed, setRound);
   $('setFeedback').innerHTML='';
   setTargetH = randHour();
-  setTargetHalf = setRound>=2 ? Math.random()<.4 : false;
-  $('setTarget').textContent = digital(setTargetH, setTargetHalf) + ' (' + timeWords(setTargetH,setTargetHalf) + ')';
+  setTargetM = pickMinute(setRound);
+  $('setTarget').textContent = digital(setTargetH, setTargetM) + ' (' + timeWords(setTargetH,setTargetM) + ')';
   // start from a random different position
-  do{ setCurH=randHour(); setCurHalf=Math.random()<.5; }
-  while(setCurH===setTargetH && setCurHalf===setTargetHalf);
+  const startMin=[0,15,30,45];
+  do{ setCurH=randHour(); setCurM=startMin[Math.floor(Math.random()*4)]; }
+  while(setCurH===setTargetH && setCurM===setTargetM);
   renderSet();
-  speak('סובבי את השעון לשעה ' + timeWords(setTargetH, setTargetHalf));
+  speak('סובבי את השעון לשעה ' + timeWords(setTargetH, setTargetM));
 }
-function renderSet(){ $('setClock').innerHTML = clockSVG(setCurH, setCurHalf, {id:'st'}); }
+function renderSet(){ $('setClock').innerHTML = clockSVG(setCurH, setCurM, {id:'st'}); }
 function setStep(d){
-  // step goes half-hour by half-hour
-  if(d>0){ if(!setCurHalf){setCurHalf=true;} else {setCurHalf=false; setCurH=(setCurH+1)%12;} }
-  else { if(setCurHalf){setCurHalf=false;} else {setCurHalf=true; setCurH=(setCurH+11)%12;} }
+  // step by a quarter hour (15 minutes) each press
+  let total = setCurH*60 + setCurM + d*15;
+  total = (total + 12*60) % (12*60);
+  setCurH = Math.floor(total/60);
+  setCurM = total%60;
   renderSet();
 }
 function checkSet(){
-  if(setCurH===setTargetH && setCurHalf===setTargetHalf){
+  if(setCurH===setTargetH && setCurM===setTargetM){
     cheer(); speak('מדהים! הצלחת!');
     $('setFeedback').innerHTML='🌟 מושלם!';
     stars++; updateStars(); burstConfetti();
@@ -439,7 +454,6 @@ function burstConfetti(n=18){
 /* ============ init ============ */
 renderLearn();
 updateStars();
-// warm up speech voices
 window.addEventListener('load',()=>{ if('speechSynthesis'in window) speechSynthesis.getVoices(); });
 document.body.addEventListener('touchstart',()=>{ if(!actx){try{actx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}} },{once:true});
 </script>
